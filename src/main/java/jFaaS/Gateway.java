@@ -32,6 +32,9 @@ public class Gateway implements FaaSInvoker {
     private FaaSInvoker httpGETInvoker;
     private VMInvoker vmInvoker;
 
+    private FaaSInvoker dockerInvoker;
+    private ContainerInvoker containerInvoker;
+
     private final static Logger LOGGER = Logger.getLogger(Gateway.class.getName());
 
     /**
@@ -156,6 +159,11 @@ public class Gateway implements FaaSInvoker {
                 vmInvoker = new VMInvoker();
             }
             return vmInvoker.invokeFunction(function, functionInputs);
+        } else if (function.contains(":docker:")) {
+            if (containerInvoker == null) {
+                containerInvoker = new ContainerInvoker();
+            }
+            return containerInvoker.invokeFunction(function, functionInputs);
         }
         return null;
     }
