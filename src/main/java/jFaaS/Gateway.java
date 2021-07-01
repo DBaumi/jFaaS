@@ -159,7 +159,7 @@ public class Gateway implements FaaSInvoker {
                 vmInvoker = new VMInvoker();
             }
             return vmInvoker.invokeFunction(function, functionInputs);
-        } else if (function.contains(":docker:")) {
+        } else if (function.contains(":container:")) {
             if (containerInvoker == null) {
                 containerInvoker = new ContainerInvoker();
             }

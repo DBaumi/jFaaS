@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class ContainerInvoker implements FaaSInvoker {
     protected static HashMap<String, String> images;
-    protected final static String jarsFilePath = "resources/jarFiles/";
+    protected final static String jarsFilePath = "jarFiles/";
 
     public ContainerInvoker() {
         images = new HashMap<>();
@@ -20,6 +20,7 @@ public class ContainerInvoker implements FaaSInvoker {
     public JsonObject invokeFunction(String function, Map<String, Object> functionInputs) throws IOException {
         String dockerfile;
         String[] functionName = function.split(":");
+        // TODO: if functionName contains a link to a image of a container then take existing container else:
         if (function.contains("java:")) {
             dockerfile = createDockerfile(functionName[functionName.length - 1], "java");
         } else if (function.contains("py:")) {
