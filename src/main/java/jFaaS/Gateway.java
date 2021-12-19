@@ -1,6 +1,8 @@
 package jFaaS;
 
 import com.amazonaws.regions.Regions;
+import com.google.gson.JsonObject;
+import jContainer.invoker.ContainerInvoker;
 import jFaaS.invokers.*;
 import jFaaS.utils.PairResult;
 
@@ -29,8 +31,7 @@ public class Gateway implements FaaSInvoker {
     private FaaSInvoker httpGETInvoker;
     private VMInvoker vmInvoker;
 
-    private FaaSInvoker dockerInvoker;
-    private ContainerInvoker containerInvoker;
+    private ContainerInvoker dockerInvoker;
 
     private final static Logger LOGGER = Logger.getLogger(Gateway.class.getName());
 
@@ -124,8 +125,8 @@ public class Gateway implements FaaSInvoker {
                 lambdaInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey, awsSessionToken, currentRegion);
             }
 */
-            lambdaInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey, awsSessionToken, tmpRegion);
-            return lambdaInvoker.invokeFunction(function, functionInputs);
+            this.lambdaInvoker = new LambdaInvoker(this.awsAccessKey, this.awsSecretKey, this.awsSessionToken, tmpRegion);
+            return this.lambdaInvoker.invokeFunction(function, functionInputs);
 
         } else if (function.contains("functions.appdomain.cloud") || function.contains("functions.cloud.ibm")) {
             if (openWhiskKey != null) {
@@ -133,8 +134,8 @@ public class Gateway implements FaaSInvoker {
                     openWhiskInvoker = new OpenWhiskInvoker(openWhiskKey);
                 }
             } else {
-                if (openWhiskInvoker == null) {
-                    openWhiskInvoker = new OpenWhiskInvoker("");
+                if (this.openWhiskInvoker == null) {
+                    this.openWhiskInvoker = new OpenWhiskInvoker("");
                 }
             }
             return openWhiskInvoker.invokeFunction(function.endsWith(".json") ? function : function + ".json", functionInputs);
@@ -152,39 +153,35 @@ public class Gateway implements FaaSInvoker {
                 googleFunctionInvoker = new GoogleFunctionInvoker();
                 }
             }
-            return googleFunctionInvoker.invokeFunction(function, functionInputs);
+            return this.googleFunctionInvoker.invokeFunction(function, functionInputs);
 
         } else if (function.contains("azurewebsites.net")) {
             if (azureKey != null) {
                 if (azureInvoker == null) {
                     azureInvoker = new AzureInvoker(azureKey);
                 }
-                
-            } else{
-            
-                if(azureInvoker == null){
 
-                azureInvoker = new AzureInvoker();
+            } else {
+
+                if (this.azureInvoker == null) {
+
+                    this.azureInvoker = new AzureInvoker();
                 }
             }
-           
-            
-            return azureInvoker.invokeFunction(function, functionInputs);
-            
 
         } else if (function.contains("fc.aliyuncs.com")) {
             // TODO check for alibaba authentication. Currently no authentication is assumed
-            return httpGETInvoker.invokeFunction(function, functionInputs);
+            return this.httpGETInvoker.invokeFunction(function, functionInputs);
         } else if (function.contains(":VM:")) {
-            if (vmInvoker == null) {
-                vmInvoker = new VMInvoker();
+            if (this.vmInvoker == null) {
+                this.vmInvoker = new VMInvoker();
             }
-            return vmInvoker.invokeFunction(function, functionInputs);
+            return this.vmInvoker.invokeFunction(function, functionInputs);
         } else if (function.contains(":container:")) {
-            if (containerInvoker == null) {
-                containerInvoker = new ContainerInvoker();
+            if (this.containerInvoker == null) {
+                this.containerInvoker = new ContainerInvoker();
             }
-            return containerInvoker.invokeFunction(function, functionInputs);
+            return this.containerInvoker.invokeFunction(function, functionInputs);
         }
         return null;
     }
