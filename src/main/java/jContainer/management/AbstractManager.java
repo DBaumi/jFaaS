@@ -48,11 +48,6 @@ public abstract class AbstractManager {
 
     }
 
-    // TODO: implement, if needed
-    public String readFile(final String path) {
-        return null;
-    }
-
     public FunctionDefinition getFunctionDefinition() {
         return this.functionDefinition;
     }

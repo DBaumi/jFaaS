@@ -3,7 +3,9 @@ package jContainer.invoker;
 import com.google.gson.JsonObject;
 import jContainer.helper.ExecutionType;
 import jContainer.helper.LocalFileCleaner;
+import jContainer.helper.Stopwatch;
 import jContainer.helper.Utils;
+import jFaaS.utils.PairResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,22 +40,23 @@ public abstract class ContainerInvoker {
      * @return JsonObject of the execution result
      * @throws IOException when input file cannot be found
      */
-    public JsonObject invokeFunction(String function, Map<String, Object> functionInputs) throws IOException {
-        String functionAsInputForInvoker = Utils.extractInputFromFunction(function);
+    public PairResult invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
+        final String functionAsInputForInvoker = Utils.extractInputFromFunction(function);
         JsonObject result = new JsonObject();
+        final Stopwatch timer = new Stopwatch(false);
 
         if (functionAsInputForInvoker.contains(":")) {
-            logger.info("Invocation with JAR file was chosen!");
+            ContainerInvoker.logger.info("Invocation with JAR file was chosen!");
             result = this.invokeWithJarOnContainer(functionAsInputForInvoker, functionInputs);
         } else if (Utils.isDockerhubRepoLink(functionAsInputForInvoker)) {
-            logger.info("Invocation with public dockerhub image was chosen!");
+            ContainerInvoker.logger.info("Invocation with public dockerhub image was chosen!");
             result = this.invokeWithDockerhubImageOnContainer(functionAsInputForInvoker, functionInputs);
         } else {
-            logger.error("Dockerhub link to public repository was provided wrong. Please check for the correct format: {}", "username/repository:imagetag");
+            ContainerInvoker.logger.error("Dockerhub link to public repository was provided wrong. Please check for the correct format: {}", "username/repository:imagetag");
             result.addProperty("error", "Dockerhub link was provided in wrong format!");
         }
 
-        return result;
+        return new PairResult<>(result.getAsString(), timer.getElapsedTime());
     }
 
     /**
@@ -77,7 +80,7 @@ public abstract class ContainerInvoker {
     abstract public JsonObject invokeWithDockerhubImageOnContainer(String dockerhubImageLink, Map<String, Object> functionInputs) throws IOException;
     
     public ExecutionType getExecutionType() {
-        return executionType;
+        return this.executionType;
     }
 
     public void setExecutionType(ExecutionType executionType) {
