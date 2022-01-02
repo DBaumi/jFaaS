@@ -1,5 +1,6 @@
 package jContainer.helper;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 /**
@@ -28,8 +29,8 @@ public class Utils {
      * @return json object representing the output of the container
      */
     public static JsonObject generateJsonOutput(final String stringToConvert) {
-        final JsonObject output = new JsonObject();
-        output.addProperty("message", stringToConvert);
+        final Gson parser = new Gson();
+        final JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
 
         return output;
     }
@@ -125,7 +126,7 @@ public class Utils {
     }
 
     /**
-     * Extracts the java version from the function.
+     * Extracts the java version from the function. If none is provided, it will automatically set JDK 8 as default.
      *
      * @param function in form "function:8"
      * @return java version as string
@@ -133,7 +134,7 @@ public class Utils {
     public static String extractJDKVersionFromFunction(final String function) {
         String s = function;
         if (!s.isEmpty()) {
-            s = s.substring(function.indexOf(":") + 1);
+            s = (s.contains(":")) ? s.substring(function.indexOf(":") + 1) : "8";
         }
         return s;
     }
@@ -148,7 +149,6 @@ public class Utils {
         String s = function;
         if (!s.isEmpty()) {
             s = s.substring(0, s.indexOf(":"));
-
         }
         return s;
     }
