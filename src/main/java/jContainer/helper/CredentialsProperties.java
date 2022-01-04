@@ -13,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Properties;
 
 public class CredentialsProperties {
     private static final java.util.Properties credentialProperties;
@@ -110,11 +111,11 @@ public class CredentialsProperties {
     /**
      * getting credentials out of credentials.properties
      */
-    private static java.util.Properties setProperties() {
-        final java.util.Properties properties = new java.util.Properties();
+    private static Properties setProperties() {
+        final Properties properties = new Properties();
         BufferedInputStream inputStream = null;
         try {
-            inputStream = new BufferedInputStream(new FileInputStream("src/main/resources/credentials.properties"));
+            inputStream = new BufferedInputStream(new FileInputStream("./credentials.properties"));
             properties.load(inputStream);
             inputStream.close();
 

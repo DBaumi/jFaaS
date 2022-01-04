@@ -1,5 +1,6 @@
 package jContainer.invoker;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jContainer.helper.ExecutionType;
 import jContainer.helper.LocalFileCleaner;
@@ -27,7 +28,7 @@ public abstract class ContainerInvoker {
      *
      * @param executionType as enum
      */
-    public ContainerInvoker(ExecutionType executionType) {
+    public ContainerInvoker(final ExecutionType executionType) {
         this.executionType = executionType;
         this.cleaner = new LocalFileCleaner(executionType);
     }
@@ -40,23 +41,25 @@ public abstract class ContainerInvoker {
      * @return JsonObject of the execution result
      * @throws IOException when input file cannot be found
      */
-    public PairResult invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
+    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
         final String functionAsInputForInvoker = Utils.extractInputFromFunction(function);
         JsonObject result = new JsonObject();
         final Stopwatch timer = new Stopwatch(false);
 
-        if (functionAsInputForInvoker.contains(":")) {
-            ContainerInvoker.logger.info("Invocation with JAR file was chosen!");
-            result = this.invokeWithJarOnContainer(functionAsInputForInvoker, functionInputs);
-        } else if (Utils.isDockerhubRepoLink(functionAsInputForInvoker)) {
+        if (Utils.isDockerhubRepoLink(functionAsInputForInvoker)) {
             ContainerInvoker.logger.info("Invocation with public dockerhub image was chosen!");
             result = this.invokeWithDockerhubImageOnContainer(functionAsInputForInvoker, functionInputs);
+        } else if (functionAsInputForInvoker.contains(":")) {
+            ContainerInvoker.logger.info("Invocation with JAR file with JDK{} was chosen!", Utils.extractJDKVersionFromFunction(functionAsInputForInvoker));
+            result = this.invokeWithJarOnContainer(functionAsInputForInvoker, functionInputs);
+        } else if (!functionAsInputForInvoker.contains(":")) {
+            ContainerInvoker.logger.info("Invocation with JAR file with JDK8 is assumed!");
+            result = this.invokeWithJarOnContainer(functionAsInputForInvoker, functionInputs);
         } else {
-            ContainerInvoker.logger.error("Dockerhub link to public repository was provided wrong. Please check for the correct format: {}", "username/repository:imagetag");
-            result.addProperty("error", "Dockerhub link was provided in wrong format!");
+            ContainerInvoker.logger.error("Dockerhub link to public repository or JAR name was provided wrong. Please check for the correct format: dockerhub link = {}, JAR = {}", "username/repository:imagetag", "functionName:JDK (8, 11, 19) or functionName");
         }
 
-        return new PairResult<>(result.getAsString(), timer.getElapsedTime());
+        return new PairResult<>(new Gson().fromJson(result, JsonObject.class).toString(), (long) timer.getElapsedTime());
     }
 
     /**
@@ -83,7 +86,7 @@ public abstract class ContainerInvoker {
         return this.executionType;
     }
 
-    public void setExecutionType(ExecutionType executionType) {
+    public void setExecutionType(final ExecutionType executionType) {
         this.executionType = executionType;
     }
 

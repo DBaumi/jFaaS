@@ -21,6 +21,7 @@ public interface Constants {
     }
 
     interface Paths {
+        String credentialsFile = "credentials.properties";
         String resourceFolder = "src/main/resources/";
         String jarFilePath = "./jars/";
         String scriptFolder = Paths.resourceFolder + "scripts/";

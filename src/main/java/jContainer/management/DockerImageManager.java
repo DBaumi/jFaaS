@@ -64,14 +64,17 @@ public class DockerImageManager extends DockerManager {
 
         inputStreamForJar.close();
 
-        final String dockerImage = this.selectDockerImageFromJavaVersion();
+        /* get credentials file from root folder */
+        this.copyCredentials();
 
+        final String dockerImage = this.selectDockerImageFromJavaVersion();
         final String payload = new Gson().toJson(this.getFunctionDefinition().getFunctionInputs());
         final StringBuilder content = new StringBuilder();
 
         content.append("FROM " + dockerImage + "\n");
         content.append("WORKDIR /\n");
         content.append("ADD " + fileNameWithEnding + " ./" + fileNameWithEnding + "\n");
+        content.append("ADD " + Constants.Paths.credentialsFile + " ./" + Constants.Paths.credentialsFile + "\n");
         content.append("CMD java -jar " + fileNameWithEnding + " " + payload + "\n");
 
         this.createFile(this.destinationFolder + "Dockerfile", content.toString());
@@ -102,6 +105,26 @@ public class DockerImageManager extends DockerManager {
             throw new FileNotFoundException("'" + Constants.Paths.googleCredentials + "' not found");
         }
         Files.copy(Paths.get(Constants.Paths.googleCredentials), Paths.get(destinationFolder + Constants.Paths.googleCredentials), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private void copyCredentials() throws IOException {
+        final InputStream inputStreamForCredential = new FileInputStream(Constants.Paths.credentialsFile);
+
+        if (inputStreamForCredential.available() != 0) {
+            Files.copy(
+                    inputStreamForCredential,
+                    Paths.get(this.destinationFolder + Constants.Paths.credentialsFile),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            final File copiedCredentialFile = new File(this.destinationFolder + Constants.Paths.credentialsFile);
+
+            if (!copiedCredentialFile.exists()) {
+                throw new FileNotFoundException("Copying the file 'credentials.property' to the destination folder did not work!");
+            }
+        }
+
+        inputStreamForCredential.close();
     }
 
     /**
