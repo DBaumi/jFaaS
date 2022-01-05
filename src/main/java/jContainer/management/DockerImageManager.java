@@ -2,7 +2,10 @@ package jContainer.management;
 
 import com.github.dockerjava.api.model.Image;
 import com.google.gson.Gson;
+import jContainer.executor.AwsContainerExecutor;
 import jContainer.helper.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -17,6 +20,7 @@ public class DockerImageManager extends DockerManager {
     private String destinationFolder;
     private String imageName;
     private ExecutionType type;
+    private final static Logger logger = LoggerFactory.getLogger(DockerImageManager.class);
 
     public DockerImageManager(final FunctionDefinition functionDefinition, final ExecutionType type) {
         super(functionDefinition);
@@ -40,44 +44,55 @@ public class DockerImageManager extends DockerManager {
 
         final Path providedPathForJar = Paths.get(CredentialsProperties.pathToJar + fileNameWithEnding);
 
-        final File providedJar = Files.exists(providedPathForJar)
+        final File jarFile = Files.exists(providedPathForJar)
                 ? new File(providedPathForJar.toString())
-                : new File("./jars/" + fileNameWithEnding);
+                : new File(Constants.Paths.fallbackJarFolder + fileNameWithEnding);
 
-        final InputStream inputStreamForJar = new FileInputStream(providedJar);
+        logger.info("Looking for JAR in '{}'", jarFile);
 
-        if (inputStreamForJar.available() != 0) {
-            Files.copy(
-                    inputStreamForJar,
-                    Paths.get(this.destinationFolder + fileNameWithEnding),
-                    StandardCopyOption.REPLACE_EXISTING
-            );
+        if(jarFile.exists()) {
+            final InputStream inputStreamForJar = new FileInputStream(jarFile);
 
-            final File copiedJarFile = new File(this.destinationFolder + fileNameWithEnding);
+            if (inputStreamForJar.available() != 0) {
+                Files.copy(
+                        inputStreamForJar,
+                        Paths.get(this.destinationFolder + fileNameWithEnding),
+                        StandardCopyOption.REPLACE_EXISTING
+                );
 
-            if (!copiedJarFile.exists()) {
-                throw new FileNotFoundException("Copying the file '" + fileNameWithEnding + "' to the destination folder did not work!");
+                final File copiedJarFile = new File(this.destinationFolder + fileNameWithEnding);
+
+                if (!copiedJarFile.exists()) {
+                    throw new FileNotFoundException("Copied file '" + fileNameWithEnding + "' does not show up in the destination folder '" + this.destinationFolder + "'!");
+                }
+            } else {
+                throw new FileNotFoundException("JAR file could not be read properly, please check file '" + fileNameWithEnding + "' and maybe build it again!");
             }
+
+            inputStreamForJar.close();
+
+            /* get credentials file from root folder */
+            this.copyCredentials();
+
+            final String dockerImage = this.selectDockerImageFromJavaVersion();
+            final String payload = new Gson().toJson(this.getFunctionDefinition().getFunctionInputs());
+            final StringBuilder content = new StringBuilder();
+
+            content.append("FROM " + dockerImage + "\n");
+            content.append("WORKDIR /\n");
+//        content.append("ADD " + fileNameWithEnding + " ./" + fileNameWithEnding + "\n");
+//        content.append("ADD " + Constants.Paths.credentialsFile + " ./" + Constants.Paths.credentialsFile + "\n");
+            content.append("ADD . ./\n");
+            content.append("CMD java -jar " + fileNameWithEnding + " " + payload + "\n");
+
+            this.createFile(this.destinationFolder + "Dockerfile", content.toString());
+
         } else {
-            throw new FileNotFoundException("JAR file could not be read properly, please check file '" + fileNameWithEnding + "' and maybe build it again!");
+            LocalFileCleaner cleaner = new LocalFileCleaner();
+            cleaner.cleanDirectories();
+
+            throw new FileNotFoundException("File '" + jarFile + "' does not exist!");
         }
-
-        inputStreamForJar.close();
-
-        /* get credentials file from root folder */
-        this.copyCredentials();
-
-        final String dockerImage = this.selectDockerImageFromJavaVersion();
-        final String payload = new Gson().toJson(this.getFunctionDefinition().getFunctionInputs());
-        final StringBuilder content = new StringBuilder();
-
-        content.append("FROM " + dockerImage + "\n");
-        content.append("WORKDIR /\n");
-        content.append("ADD " + fileNameWithEnding + " ./" + fileNameWithEnding + "\n");
-        content.append("ADD " + Constants.Paths.credentialsFile + " ./" + Constants.Paths.credentialsFile + "\n");
-        content.append("CMD java -jar " + fileNameWithEnding + " " + payload + "\n");
-
-        this.createFile(this.destinationFolder + "Dockerfile", content.toString());
     }
 
     /**
@@ -107,6 +122,11 @@ public class DockerImageManager extends DockerManager {
         Files.copy(Paths.get(Constants.Paths.googleCredentials), Paths.get(destinationFolder + Constants.Paths.googleCredentials), StandardCopyOption.REPLACE_EXISTING);
     }
 
+    /**
+     * Copies credentials.properties file into the script folder for the later execution of AWS services, credentials are needed.
+     *
+     * @throws IOException
+     */
     private void copyCredentials() throws IOException {
         final InputStream inputStreamForCredential = new FileInputStream(Constants.Paths.credentialsFile);
 
@@ -138,9 +158,22 @@ public class DockerImageManager extends DockerManager {
                 ? (Constants.Paths.localFunctionDocker + this.getFunctionDefinition().getFunctionName() + '/')
                 : (Constants.Paths.scriptFolder + this.getFunctionDefinition().getFunctionName() + '/'); // directory to start docker build
 
-        this.imageName = (this.type == ExecutionType.LOCAL_DOCKER)
-                ? ("local-function:" + this.getFunctionDefinition().getFunctionName())
-                : (this.getCreatedImageNameDockerHub());    // for AWS and GOOGLE to create terraform script afterwards
+
+        switch (this.type) {
+            case LOCAL_DOCKER:
+                this.imageName = "local-function:" + this.getFunctionDefinition().getFunctionName();
+                break;
+            case ECS:
+                if (AwsContainerExecutor.ecrManager == null) {
+                    System.err.println("ECR Manager not set");
+                    return;
+                }
+                this.imageName = AwsContainerExecutor.ecrManager.getRepoLink() + ":" + this.getFunctionDefinition().getFunctionName();
+//                this.imageName = "ecr_image_" + this.getFunctionDefinition().getFunctionName();
+                break;
+            default:
+                this.imageName = this.getCreatedImageNameDockerHub();
+        }
 
         this.createDockerfileForFunction(fileNameWithEnding);
 
@@ -183,6 +216,17 @@ public class DockerImageManager extends DockerManager {
     }
 
     /**
+     * push the created image onto AWS ECR repository
+     */
+    public void pushDockerImageToAwsEcr() {
+        if (AwsContainerExecutor.ecrManager == null) {
+            System.err.println("ECR Manager not set");
+            return;
+        }
+        AwsContainerExecutor.ecrManager.pushImageToRepo(this.getImageName());
+    }
+
+    /**
      * pull image from provided dockerhub repository.
      */
     public void pullDockerImageFromHub() {
@@ -190,6 +234,17 @@ public class DockerImageManager extends DockerManager {
                 "docker login -u " + CredentialsProperties.dockerUser + " -p " + CredentialsProperties.dockerAccessToken,
                 "docker image pull " + this.getImageName()
         );
+    }
+
+    /**
+     * pull image from provided AWS ECR repository.
+     */
+    public void pullDockerImageFromAwsEcr() {
+        if (AwsContainerExecutor.ecrManager == null) {
+            System.err.println("ECR Manager not set");
+            return;
+        }
+        AwsContainerExecutor.ecrManager.pullImageFromRepo(this.getImageName());
     }
 
     /**

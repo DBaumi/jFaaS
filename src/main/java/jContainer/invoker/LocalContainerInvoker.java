@@ -12,32 +12,31 @@ import java.util.Map;
 
 public class LocalContainerInvoker extends ContainerInvoker {
 
-    public LocalContainerInvoker() {
+    public LocalContainerInvoker(){
         super(ExecutionType.LOCAL_DOCKER);
     }
 
     /**
      * Invoke a function on the local docker engine.
-     *
-     * @param function       as a String for the function to invoke
+     * @param jarName as a String for the function to invoke
      * @param functionInputs as a Map<String, Object> to represent JSON input
      * @return functionOutputs as a Map<String, Object> to represent JSON output
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithJarOnContainer(String function, final Map<String, Object> functionInputs) throws IOException {
-        final Stopwatch invocationTime = new Stopwatch(false);
-        function = function.toLowerCase();
+    public JsonObject invokeWithJar(String jarName, Map<String, Object> functionInputs) throws IOException {
+        Stopwatch invocationTime = new Stopwatch(false);
+        jarName = jarName.toLowerCase();
 
-        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromFunction(function), functionInputs, Utils.extractJDKVersionFromFunction(function));
-        final LocalDockerContainerExecutor localDockerContainerExecutor = new LocalDockerContainerExecutor(functionDefinition);
+        FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromFunction(jarName), functionInputs, Utils.extractJDKVersionFromFunction(jarName));
+        LocalDockerContainerExecutor localDockerContainerExecutor = new LocalDockerContainerExecutor(functionDefinition);
         localDockerContainerExecutor.executeFunctionWithJarInLocalContainer();
 
         functionDefinition.setFunctionOutputs(localDockerContainerExecutor.resultFromLocalContainerExecution());
 
         localDockerContainerExecutor.removeLocalDockerResources();
-        ContainerInvoker.logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
-        ContainerInvoker.logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
+        logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
+        logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
         this.cleaner.cleanDirectories();
 
@@ -47,29 +46,43 @@ public class LocalContainerInvoker extends ContainerInvoker {
     /**
      * Invoke a function on a container system with a dockerhub repository link to an image with the function already in it on the local docker engine.
      *
-     * @param dockerhubImageLink as a String for the function to invoke
-     * @param functionInputs     as a Map<String, Object> to represent JSON input
+     * @param dockerhubImageLink    as a String for the function to invoke
+     * @param functionInputs        as a Map<String, Object> to represent JSON input
      * @return functionOutputs      as a Map<String, Object> to represent JSON output
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithDockerhubImageOnContainer(String dockerhubImageLink, final Map<String, Object> functionInputs) throws IOException {
-        final Stopwatch invocationTime = new Stopwatch(false);
+    public JsonObject invokeWithDockerhubImage(String dockerhubImageLink, Map<String, Object> functionInputs) throws IOException {
+        Stopwatch invocationTime = new Stopwatch(false);
         dockerhubImageLink = dockerhubImageLink.toLowerCase();
 
-        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.getFunctionNameFromDockerhubLink(dockerhubImageLink), functionInputs);
-        final LocalDockerContainerExecutor localDockerContainerExecutor = new LocalDockerContainerExecutor(functionDefinition);
+        FunctionDefinition functionDefinition = new FunctionDefinition(Utils.getFunctionNameFromDockerhubLink(dockerhubImageLink), functionInputs);
+        LocalDockerContainerExecutor localDockerContainerExecutor = new LocalDockerContainerExecutor(functionDefinition);
         localDockerContainerExecutor.getImageManager().setImageName(dockerhubImageLink);
         localDockerContainerExecutor.executeFunctionWithDockerhubInLocalContainer();
 
         functionDefinition.setFunctionOutputs(localDockerContainerExecutor.resultFromLocalContainerExecution());
 
         localDockerContainerExecutor.removeLocalDockerResources();
-        ContainerInvoker.logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
-        ContainerInvoker.logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
+        logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
+        logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
         this.cleaner.cleanDirectories();
 
         return functionDefinition.getFunctionOutputs();
+    }
+
+    /**
+     *
+     *
+     * @param awsEcrImageLink as a String for the function to invoke
+     * @param functionInputs  as a Map<String, Object> to represent JSON input
+     * @return
+     * @throws IOException
+     */
+    @Override
+    public JsonObject invokeWithAwsEcrImage(String awsEcrImageLink, final Map<String, Object> functionInputs) throws IOException {
+        logger.warn("Local invocation with ECR image is not yet supported!");
+        throw new UnsupportedOperationException("Local execution with an ECR image is not yet supported!");
     }
 }

@@ -30,7 +30,7 @@ public class CloudWatchLogsManager {
     }
 
     public CloudWatchLogsManager(final FunctionDefinition functionDefinition) {
-        this.logGroupName = Constants.CloudWatch.log_group_name + "_" + functionDefinition.getFunctionName() + "_" + CredentialsProperties.localUser;
+        this.logGroupName = Constants.CloudWatch.log_group_name + "_" + functionDefinition.getFunctionName().toLowerCase() + "_" + CredentialsProperties.localUser.toLowerCase();
         this.streams = new ArrayList<>();
     }
 
@@ -48,7 +48,7 @@ public class CloudWatchLogsManager {
      * @return json object representing the result of function invocation inside the container
      */
     public JsonObject resultFromLogStreamPrefix(final String functionName) {
-        if (!functionName.isEmpty()) {
+        if(!functionName.isEmpty()) {
             this.getLogEvents(CloudWatchLogsManager.LOG_GROUP_PREFIX + functionName);
         } else {
             CloudWatchLogsManager.logger.error("No LogEvents found to the given function name!");
@@ -61,7 +61,6 @@ public class CloudWatchLogsManager {
 
     /**
      * Retrieves log events from the log stream prefix.
-     *
      * @param logStreamNamePrefix
      */
     private void getLogEvents(final String logStreamNamePrefix) {
@@ -84,7 +83,7 @@ public class CloudWatchLogsManager {
     /**
      * Log execution time of the container execution.
      */
-    public Long executionTimeFromLogEvent() {
+    public Long executionTimeFromLogEvent(){
         final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT+2"));
 

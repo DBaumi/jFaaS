@@ -6,13 +6,11 @@ import jContainer.helper.FunctionDefinition;
 import java.io.IOException;
 
 
-public class TerraformGkeManager extends AbstractManager {
-    private final DockerContainerTerraformManager dockerContainerTerraformManager;
-    private String dockerImageName = this.getCreatedImageNameDockerHub();
+public class TerraformGkeManager extends AbstractTerraformManager {
+
 
     public TerraformGkeManager(final FunctionDefinition functionDefinition) {
         super(functionDefinition);
-        this.dockerContainerTerraformManager = new DockerContainerTerraformManager(functionDefinition);
     }
 
     /**
@@ -20,7 +18,8 @@ public class TerraformGkeManager extends AbstractManager {
      * but terraform apply -auto-approve takes too much time ca.20min therefore it throws an error which results in
      * not being able to make a cleanup with terraform destroy, cleanup has to be done manually
      */
-    private void createGkeTerraformScript() {
+    @Override
+    protected void createTerraformScript() {
 
         final String containerName = "jcontainer" + this.getUniqueSuffix().toLowerCase();
 
@@ -154,70 +153,6 @@ public class TerraformGkeManager extends AbstractManager {
                         "}\n"
         );
         this.createFile(this.getWorkingDirectory() + this.getFunctionDefinition().getFunctionName() + ".tf", stringBuilder.toString());
-    }
-
-    /**
-     * executes the created terraform script
-     */
-    public void runTerraformScript() throws IOException {
-        this.createGkeTerraformScript();
-
-        //start local terraform container
-        this.dockerContainerTerraformManager.startTerraformContainer();
-        this.execTerraformCommand("ls", "terraform init", "terraform refresh", "terraform apply -auto-approve");
-    }
-
-    /**
-     * destroys the created aws resources
-     */
-    public void removeTerraformCreatedResources() {
-        this.execTerraformCommand("terraform plan -destroy -out=tfplan", "terraform apply \"tfplan\"");
-    }
-
-    /**
-     * removes all locally created docker resources.
-     *
-     * @return true if deletion was successful, false otherwise
-     */
-    public Boolean removeTerraformResources() {
-        return this.dockerContainerTerraformManager.removeTerraformDockerResources();
-    }
-
-    /**
-     * gets the outputs out of terraform script
-     */
-    public void getTerraformOutput() {
-        this.execTerraformCommand(
-                "terraform output -json",
-                "terraform output -json > " + this.getFunctionDefinition().getFunctionName() + "_output.json"
-        );
-    }
-
-    /**
-     * send and execute commands in terraform-docker-container
-     *
-     * @param commands
-     */
-    private void execTerraformCommand(final String... commands) {
-        for (final String command : commands) {
-            this.dockerContainerTerraformManager.sendCommandToContainer(command);
-        }
-    }
-
-    private String getUniqueSuffix() {
-        return "-" + this.getFunctionDefinition().getFunctionName() + "-" + CredentialsProperties.localUser.toLowerCase();
-    }
-
-    public String getDockerImageName() {
-        return this.dockerImageName;
-    }
-
-    public void setDockerImageName(final String dockerImageName) {
-        this.dockerImageName = dockerImageName;
-    }
-
-    public DockerContainerTerraformManager getDockerContainerTerraformManager() {
-        return this.dockerContainerTerraformManager;
     }
 
 }

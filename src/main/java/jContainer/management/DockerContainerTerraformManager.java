@@ -71,23 +71,24 @@ public class DockerContainerTerraformManager extends DockerManager {
     public void startTerraformContainer() throws IOException {
         this.createLocalTerraformImage();
         final List<Container> containers = DockerManager.dockerClient.listContainersCmd().exec();
-        if (containers.stream().noneMatch(c -> c.getImage().equals(this.localTerraformDockerImageName))) {
+        if(containers.stream().noneMatch(c -> c.getImage().equals(this.localTerraformDockerImageName))) {
             TerminalManager.executeCommand(Constants.Paths.localTerraformDocker, false, "docker run -d -i --name " + this.getContainerName() + " " + this.localTerraformDockerImageName);
         }
 
     }
 
     /**
+     *
      * @return
      */
     public Boolean removeTerraformDockerResources() {
-        final List<String> containerDeletion = TerminalManager.executeCommand(
+        List<String> containerDeletion = TerminalManager.executeCommand(
                 Constants.Paths.localTerraformDocker,
                 false,
                 "docker stop " + this.getContainerName(), "docker rm -f " + this.getContainerName()
         );
 
-        final List<String> imageDeletion = TerminalManager.executeCommand(
+        List<String> imageDeletion = TerminalManager.executeCommand(
                 Constants.Paths.localTerraformDocker,
                 false, "docker rmi " + this.localTerraformDockerImageName
         );

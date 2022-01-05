@@ -16,7 +16,6 @@ public class FunctionDefinition {
 
     /**
      * For invocation with docker image.
-     *
      * @param functionName
      * @param functionInputs
      */
@@ -28,7 +27,6 @@ public class FunctionDefinition {
 
     /**
      * For invocation with JAR file.
-     *
      * @param functionName
      * @param functionInputs
      * @param javaVersion

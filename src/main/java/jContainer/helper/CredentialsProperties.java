@@ -13,7 +13,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Properties;
 
 public class CredentialsProperties {
     private static final java.util.Properties credentialProperties;
@@ -27,6 +26,7 @@ public class CredentialsProperties {
     public static final String awsExecutionRole;
     public static final String awsEncryptionKey;
     public static final String awsRegion;
+    public static final String repoLink;
     public static final BasicSessionCredentials basicSessionCredentials;
     public static final BasicAWSCredentials credentials;
     public static final AWSLogsClient awsLogsClient;
@@ -46,6 +46,7 @@ public class CredentialsProperties {
 
         //optional
         privateKey = CredentialsProperties.credentialProperties.getProperty("private_key");
+        repoLink = CredentialsProperties.credentialProperties.getProperty("ecr_repo_link");
         awsRegion = Utils.isNullOrEmpty(CredentialsProperties.credentialProperties.getProperty("aws_region")) ? Constants.region : CredentialsProperties.credentialProperties.getProperty("aws_region");
         awsSessionToken = CredentialsProperties.credentialProperties.getProperty("aws_session_token");
         pathToJar = CredentialsProperties.credentialProperties.getProperty("absolute_path_to_JAR");
@@ -59,6 +60,7 @@ public class CredentialsProperties {
         awsEncryptionKey = CredentialsProperties.getMandatoryProperty("aws_encryption_key_arn");
 
         // obligatory docker
+        // TODO not needed anymore
         dockerRepo = CredentialsProperties.getMandatoryProperty("docker_repository");
         dockerUser = CredentialsProperties.getMandatoryProperty("docker_user");
         dockerAccessToken = CredentialsProperties.getMandatoryProperty("docker_access_token");
@@ -111,11 +113,11 @@ public class CredentialsProperties {
     /**
      * getting credentials out of credentials.properties
      */
-    private static Properties setProperties() {
-        final Properties properties = new Properties();
+    private static java.util.Properties setProperties() {
+        final java.util.Properties properties = new java.util.Properties();
         BufferedInputStream inputStream = null;
         try {
-            inputStream = new BufferedInputStream(new FileInputStream("./credentials.properties"));
+            inputStream = new BufferedInputStream(new FileInputStream("./" + Constants.Paths.credentialsFile));
             properties.load(inputStream);
             inputStream.close();
 

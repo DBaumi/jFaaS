@@ -59,7 +59,7 @@ public class LocalDockerContainerExecutor extends DockerManager {
     /**
      * Starts the execution as a local container from a dockerhub link to a public repository image. If first creates an image and then
      */
-    public void executeFunctionWithDockerhubInLocalContainer() {
+    public void executeFunctionWithDockerhubInLocalContainer() throws IOException {
         this.imageManager.setWorkingDirectory(Constants.Paths.localFunctionDocker + this.getFunctionDefinition().getFunctionName() + '/');
         this.prepareDockerImageForLocalExecution();
         this.startContainer();

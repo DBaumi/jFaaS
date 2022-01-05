@@ -28,9 +28,9 @@ public class Utils {
      * @param stringToConvert output string from the LogEvent
      * @return json object representing the output of the container
      */
-    public static JsonObject generateJsonOutput(final String stringToConvert) {
-        final Gson parser = new Gson();
-        final JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
+    public static JsonObject generateJsonOutput(String stringToConvert) {
+        Gson parser = new Gson();
+        JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
 
         return output;
     }
@@ -79,6 +79,21 @@ public class Utils {
     }
 
     /**
+     * Extract function name from AWS ECR link to image with tag.
+     *
+     * @param awsEcrImageLink
+     * @return function name
+     */
+    public static String getFunctionNameFromAwsEcrLink(final String awsEcrImageLink) {
+        String function = awsEcrImageLink;
+        if (!awsEcrImageLink.isEmpty()) {
+            function = function.substring(function.lastIndexOf(":") + 1);
+        }
+
+        return function;
+    }
+
+    /**
      * Extract  image name from dockerhub link.
      *
      * @param dockerhubImageLink link to the image on the public dockerhub repository
@@ -99,7 +114,7 @@ public class Utils {
      * @param functionInput
      * @return
      */
-    public static String extractInputFromFunction(final String functionInput) {
+    public static String extractResourceLinkForFunction(final String functionInput) {
         String function = functionInput;
         if (!function.isEmpty()) {
             function = function.substring(function.indexOf("_") + 1, function.lastIndexOf("_"));
@@ -116,6 +131,14 @@ public class Utils {
     }
 
     /**
+     * @param link
+     * @return
+     */
+    public static Boolean isAwsEcrRepoLink(final String link) {
+        return (link.contains(".dkr.ecr.") && link.contains(".amazonaws.com/"));
+    }
+
+    /**
      * Checks a string it is empty or null.
      *
      * @param input as a String
@@ -126,7 +149,7 @@ public class Utils {
     }
 
     /**
-     * Extracts the java version from the function. If none is provided, it will automatically set JDK 8 as default.
+     * Extracts the java version from the function.
      *
      * @param function in form "function:8"
      * @return java version as string

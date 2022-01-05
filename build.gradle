@@ -28,6 +28,7 @@ dependencies {
     implementation 'com.amazonaws:aws-java-sdk:1.12.17'
     implementation 'com.amazonaws:aws-java-sdk-lambda:1.11.327'
     implementation 'com.amazonaws:aws-java-sdk-ecs:1.12.17'
+    implementation 'com.amazonaws:aws-java-sdk-ecr:1.11.66'
     implementation 'org.apache.commons:commons-lang3:3.4'
     implementation 'commons-validator:commons-validator:1.6'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.0'

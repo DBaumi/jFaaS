@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import jContainer.helper.ExecutionType;
 import jContainer.helper.FunctionDefinition;
 import jContainer.helper.Stopwatch;
+import jContainer.management.AwsElasticContainerRegistryManager;
 import jContainer.management.CloudWatchLogsManager;
 import jContainer.management.DockerImageManager;
 import jContainer.management.TerraformAwsManager;
@@ -22,8 +23,10 @@ public class AwsContainerExecutor {
     /* creates local-terraform container to deploy ECS resources */
     private TerraformAwsManager terraformAwsManager;
 
+    public static AwsElasticContainerRegistryManager ecrManager;
+
     /* Logger */
-    final static Logger logger = LoggerFactory.getLogger(AwsContainerExecutor.class);
+    public static Logger logger = LoggerFactory.getLogger(AwsContainerExecutor.class);
 
     /**
      * Constructor for AWS execution.
@@ -32,6 +35,7 @@ public class AwsContainerExecutor {
      * @param executionType      provider
      */
     public AwsContainerExecutor(final FunctionDefinition functionDefinition, final ExecutionType executionType) {
+        AwsContainerExecutor.ecrManager = new AwsElasticContainerRegistryManager(functionDefinition);
         this.imageManager = new DockerImageManager(functionDefinition, executionType);
         this.cloudWatchLogsManager = new CloudWatchLogsManager(functionDefinition);
         this.terraformAwsManager = new TerraformAwsManager(functionDefinition);
@@ -45,18 +49,19 @@ public class AwsContainerExecutor {
      */
     public void executeFunctionWithJarInECS(final String functionNameWithEnding) throws IOException {
         this.imageManager.createDockerImage(functionNameWithEnding);
-        this.imageManager.pushDockerImageToHub();
+//        imageManager.pushDockerImageToHub();
+        this.imageManager.pushDockerImageToAwsEcr();
         this.terraformAwsManager.runTerraformScript();
     }
 
     /**
      * Executes the function provided as a docker image on AWS ECS service.
      *
-     * @param dockerhubImageLink
+     * @param ecrImageLink
      * @throws IOException
      */
-    public void executeFunctionWithDockerhubInECS(final String dockerhubImageLink) throws IOException {
-        this.imageManager.setImageName(dockerhubImageLink);
+    public void executeFunctionWithECRImageInECS(final String ecrImageLink) throws IOException {
+        this.imageManager.setImageName(ecrImageLink);
         this.terraformAwsManager.setDockerImageName(this.imageManager.getImageName());
         this.terraformAwsManager.runTerraformScript();
     }
@@ -83,7 +88,7 @@ public class AwsContainerExecutor {
     /**
      * Kill all created resources with ECS execution (local docker & ecs services).
      */
-    public void cleanUpAllResources(final Boolean deleteLocalImage) {
+    public void cleanUpAllResources(final Boolean deleteLocalImage, final Boolean deleteAwsEcrImage) {
         final Stopwatch cleanUpTime = new Stopwatch(false);
 
         if (deleteLocalImage) {
@@ -92,6 +97,10 @@ public class AwsContainerExecutor {
 
         this.terraformAwsManager.removeTerraformCreatedResources();
         this.terraformAwsManager.removeLocalCreatedTerraformResources();
+
+        if (deleteAwsEcrImage) {
+            AwsContainerExecutor.ecrManager.removeImageFromRepo(this.imageManager.getFunctionDefinition().getFunctionName().toLowerCase());
+        }
 
         AwsContainerExecutor.logger.info("Clean up of all terraform cloud and local resources took {}ms", cleanUpTime.getElapsedTime());
     }

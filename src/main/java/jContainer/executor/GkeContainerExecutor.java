@@ -15,7 +15,7 @@ public class GkeContainerExecutor {
     private DockerImageManager imageManager;
     private TerraformGkeManager terraformGkeManager;
 
-    public GkeContainerExecutor(final FunctionDefinition functionDefinition, final ExecutionType executionType) {
+    public GkeContainerExecutor(FunctionDefinition functionDefinition, ExecutionType executionType) {
         /*this.imageManager = new DockerImageManager(functionDefinition, executionType);
         this.terraformGkeManager = new TerraformGkeManager(functionDefinition);*/
     }
