@@ -29,7 +29,7 @@ public class EcsContainerInvoker extends ContainerInvoker {
         final Stopwatch invocationTime = new Stopwatch(false);
         jarName = jarName.toLowerCase();
 
-        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromFunction(jarName), functionInputs, Utils.extractJDKVersionFromFunction(jarName));
+        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromResourceLink(jarName), functionInputs, Utils.extractJDKVersionFromResourceLink(jarName));
         final AwsContainerExecutor awsContainerExecutor = new AwsContainerExecutor(functionDefinition, this.executionType);
         awsContainerExecutor.executeFunctionWithJarInECS(functionDefinition.getJarFileName());
 
@@ -39,8 +39,6 @@ public class EcsContainerInvoker extends ContainerInvoker {
 
         ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
-
-        this.cleaner.cleanDirectories();
 
         return functionDefinition.getFunctionOutputs();
     }
@@ -69,8 +67,6 @@ public class EcsContainerInvoker extends ContainerInvoker {
         ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
-        this.cleaner.cleanDirectories();
-
         return functionDefinition.getFunctionOutputs();
     }
 
@@ -97,8 +93,6 @@ public class EcsContainerInvoker extends ContainerInvoker {
 
         ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
-
-        this.cleaner.cleanDirectories();
 
         return functionDefinition.getFunctionOutputs();
     }

@@ -48,7 +48,7 @@ public class DockerImageManager extends DockerManager {
                 ? new File(providedPathForJar.toString())
                 : new File(Constants.Paths.fallbackJarFolder + fileNameWithEnding);
 
-        logger.info("Looking for JAR in '{}'", jarFile);
+        DockerImageManager.logger.info("Looking for JAR in '{}'", jarFile);
 
         if(jarFile.exists()) {
             final InputStream inputStreamForJar = new FileInputStream(jarFile);
@@ -80,15 +80,13 @@ public class DockerImageManager extends DockerManager {
 
             content.append("FROM " + dockerImage + "\n");
             content.append("WORKDIR /\n");
-//        content.append("ADD " + fileNameWithEnding + " ./" + fileNameWithEnding + "\n");
-//        content.append("ADD " + Constants.Paths.credentialsFile + " ./" + Constants.Paths.credentialsFile + "\n");
             content.append("ADD . ./\n");
             content.append("CMD java -jar " + fileNameWithEnding + " " + payload + "\n");
 
             this.createFile(this.destinationFolder + "Dockerfile", content.toString());
 
         } else {
-            LocalFileCleaner cleaner = new LocalFileCleaner();
+            final LocalFileCleaner cleaner = new LocalFileCleaner();
             cleaner.cleanDirectories();
 
             throw new FileNotFoundException("File '" + jarFile + "' does not exist!");

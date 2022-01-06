@@ -33,7 +33,6 @@ public abstract class ContainerInvoker {
      */
     public ContainerInvoker(final ExecutionType executionType) {
         this.executionType = executionType;
-        this.cleaner = new LocalFileCleaner();
     }
 
     /**
@@ -45,7 +44,7 @@ public abstract class ContainerInvoker {
      * @throws IOException when input file cannot be found
      */
     public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
-        final String functionResourceLink = Utils.extractResourceLinkForFunction(function);
+        final String functionResourceLink = Utils.extractResourceLink(function);
         JsonObject result = new JsonObject();
         final Stopwatch timer = new Stopwatch(false);
 

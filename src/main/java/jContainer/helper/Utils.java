@@ -28,9 +28,9 @@ public class Utils {
      * @param stringToConvert output string from the LogEvent
      * @return json object representing the output of the container
      */
-    public static JsonObject generateJsonOutput(String stringToConvert) {
-        Gson parser = new Gson();
-        JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
+    public static JsonObject generateJsonOutput(final String stringToConvert) {
+        final Gson parser = new Gson();
+        final JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
 
         return output;
     }
@@ -109,12 +109,12 @@ public class Utils {
     }
 
     /**
-     * Extracts the dockerhub link from the public repository.
+     * Extracts the dockerhub link from the input.
      *
      * @param functionInput
      * @return
      */
-    public static String extractResourceLinkForFunction(final String functionInput) {
+    public static String extractResourceLink(final String functionInput) {
         String function = functionInput;
         if (!function.isEmpty()) {
             function = function.substring(function.indexOf("_") + 1, function.lastIndexOf("_"));
@@ -154,7 +154,7 @@ public class Utils {
      * @param function in form "function:8"
      * @return java version as string
      */
-    public static String extractJDKVersionFromFunction(final String function) {
+    public static String extractJDKVersionFromResourceLink(final String function) {
         String s = function;
         if (!s.isEmpty()) {
             s = (s.contains(":")) ? s.substring(function.indexOf(":") + 1) : "8";
@@ -168,7 +168,7 @@ public class Utils {
      * @param function in form "function:8"
      * @return java version as string
      */
-    public static String extractFunctionNameFromFunction(final String function) {
+    public static String extractFunctionNameFromResourceLink(final String function) {
         String s = function;
         if (!s.isEmpty()) {
             s = s.substring(0, s.indexOf(":"));
