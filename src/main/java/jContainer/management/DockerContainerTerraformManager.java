@@ -15,10 +15,14 @@ import java.util.stream.Collectors;
 
 public class DockerContainerTerraformManager extends DockerManager {
 
-    private final String localTerraformDockerImageName = "local-terraform";
+    private final String localTerraformDockerImageName = Constants.Terraform.local_terraform;
+    private final String localTerraformDockerImageWithTag;
+    private final String localTerraformFolderPath;
 
     public DockerContainerTerraformManager(final FunctionDefinition functionDefinition) {
         super(functionDefinition);
+        this.localTerraformDockerImageWithTag = this.localTerraformDockerImageName + ":" + this.getFunctionDefinition().getFunctionName();
+        this.localTerraformFolderPath = Constants.Paths.localTerraformDocker + "_" + this.getFunctionDefinition().getFunctionName() + '/';
     }
 
     /**
@@ -27,14 +31,13 @@ public class DockerContainerTerraformManager extends DockerManager {
      * @throws IOException
      */
     private void createLocalTerraformImage() throws IOException {
-        final String destinationFolder = Constants.Paths.localTerraformDocker;
         final String scriptFolder = Constants.Paths.scriptFolder + this.getFunctionDefinition().getFunctionName() + '/';
-        final File destinationPath = new File(destinationFolder);
+        final File terraformDockerFolder = new File(this.localTerraformFolderPath);
 
-        if (!destinationPath.exists()) {
-            destinationPath.mkdirs();
+        if (!terraformDockerFolder.exists()) {
+            terraformDockerFolder.mkdirs();
         }
-        FileUtils.copyDirectory(new File(scriptFolder), new File(destinationFolder + this.getFunctionDefinition().getFunctionName()));//, asFilter);
+        FileUtils.copyDirectory(new File(scriptFolder), new File(this.localTerraformFolderPath + this.getFunctionDefinition().getFunctionName()));
 
         final StringBuilder content = new StringBuilder();
         content.append("FROM ubuntu:21.10\n");
@@ -51,7 +54,7 @@ public class DockerContainerTerraformManager extends DockerManager {
                         "RUN sudo mv terraform /usr/local/bin/\n");
         content.append("ADD ./" + this.getFunctionDefinition().getFunctionName() + " ./\n");
 
-        this.createFile(destinationFolder + "Dockerfile", content.toString());
+        this.createFile(this.localTerraformFolderPath + "Dockerfile", content.toString());
 
         final List<Image> images = DockerManager.dockerClient.listImagesCmd().exec();
         final List<String> repoTags = images.stream()
@@ -59,7 +62,11 @@ public class DockerContainerTerraformManager extends DockerManager {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
         if (repoTags.stream().noneMatch(t -> t.contains(this.localTerraformDockerImageName))) {
-            TerminalManager.executeCommand(Constants.Paths.localTerraformDocker, false, "docker build . -t " + this.localTerraformDockerImageName);
+            TerminalManager.executeCommand(
+                    this.localTerraformFolderPath,
+                    false,
+                    "docker build . -t " + this.localTerraformDockerImageWithTag
+            );
         }
     }
 
@@ -72,7 +79,11 @@ public class DockerContainerTerraformManager extends DockerManager {
         this.createLocalTerraformImage();
         final List<Container> containers = DockerManager.dockerClient.listContainersCmd().exec();
         if(containers.stream().noneMatch(c -> c.getImage().equals(this.localTerraformDockerImageName))) {
-            TerminalManager.executeCommand(Constants.Paths.localTerraformDocker, false, "docker run -d -i --name " + this.getContainerName() + " " + this.localTerraformDockerImageName);
+            TerminalManager.executeCommand(
+                    this.localTerraformFolderPath,
+                    false,
+                    "docker run -d -i --name " + this.getContainerName() + " " + this.localTerraformDockerImageWithTag
+            );
         }
 
     }
@@ -82,15 +93,15 @@ public class DockerContainerTerraformManager extends DockerManager {
      * @return
      */
     public Boolean removeTerraformDockerResources() {
-        List<String> containerDeletion = TerminalManager.executeCommand(
-                Constants.Paths.localTerraformDocker,
+        final List<String> containerDeletion = TerminalManager.executeCommand(
+                this.localTerraformFolderPath,
                 false,
                 "docker stop " + this.getContainerName(), "docker rm -f " + this.getContainerName()
         );
 
-        List<String> imageDeletion = TerminalManager.executeCommand(
-                Constants.Paths.localTerraformDocker,
-                false, "docker rmi " + this.localTerraformDockerImageName
+        final List<String> imageDeletion = TerminalManager.executeCommand(
+                this.localTerraformFolderPath,
+                false, "docker rmi " + this.localTerraformDockerImageWithTag
         );
 
         return (containerDeletion.size() > 0) && (imageDeletion.size() > 0);
@@ -102,7 +113,11 @@ public class DockerContainerTerraformManager extends DockerManager {
      * @param command
      */
     public void sendCommandToContainer(final String command) {
-        TerminalManager.executeCommand(Constants.Paths.localTerraformDocker, false, "docker exec " + this.getContainerName() + " " + command);
+        TerminalManager.executeCommand(
+                this.localTerraformFolderPath,
+                false,
+                "docker exec " + this.getContainerName() + " " + command
+        );
     }
 
     public String getLocalTerraformDockerImageName() {

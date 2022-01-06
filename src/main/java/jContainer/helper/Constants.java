@@ -13,6 +13,10 @@ public interface Constants {
         Integer retention_time_days = 1;
     }
 
+    interface Terraform {
+        String local_terraform = "local-terraform";
+    }
+
     interface Docker {
         String hub_user_and_repo_name = CredentialsProperties.dockerUser + "/" + CredentialsProperties.dockerRepo + ":";
     }
@@ -27,7 +31,7 @@ public interface Constants {
         String fallbackJarFolder = "./jars/";
         String scriptFolder = Constants.Paths.jContainerResourceFolder + "scripts/";
         String googleCredentials = "google_cred.json";
-        String localTerraformDocker = Paths.jContainerResourceFolder + "localTerraform/";
+        String localTerraformDocker = Paths.jContainerResourceFolder + "localTerraform";
         String localFunctionDocker = Paths.jContainerResourceFolder + "localFunction/";
 
     }
