@@ -15,13 +15,12 @@ import java.util.stream.Collectors;
 
 public class DockerContainerTerraformManager extends DockerManager {
 
-    private final String localTerraformDockerImageName = Constants.Terraform.local_terraform;
-    private final String localTerraformDockerImageWithTag;
+    private final String localTerraformDockerImageName;
     private final String localTerraformFolderPath;
 
     public DockerContainerTerraformManager(final FunctionDefinition functionDefinition) {
         super(functionDefinition);
-        this.localTerraformDockerImageWithTag = this.localTerraformDockerImageName + ":" + this.getFunctionDefinition().getFunctionName();
+        this.localTerraformDockerImageName = Constants.Terraform.local_terraform + "_" + this.getFunctionDefinition().getFunctionName();
         this.localTerraformFolderPath = Constants.Paths.localTerraformDocker + "_" + this.getFunctionDefinition().getFunctionName() + '/';
     }
 
@@ -65,7 +64,7 @@ public class DockerContainerTerraformManager extends DockerManager {
             TerminalManager.executeCommand(
                     this.localTerraformFolderPath,
                     false,
-                    "docker build . -t " + this.localTerraformDockerImageWithTag
+                    "docker build . -t " + this.localTerraformDockerImageName
             );
         }
     }
@@ -82,7 +81,7 @@ public class DockerContainerTerraformManager extends DockerManager {
             TerminalManager.executeCommand(
                     this.localTerraformFolderPath,
                     false,
-                    "docker run -d -i --name " + this.getContainerName() + " " + this.localTerraformDockerImageWithTag
+                    "docker run -d -i --name " + this.getContainerName() + " " + this.localTerraformDockerImageName
             );
         }
 
@@ -101,7 +100,7 @@ public class DockerContainerTerraformManager extends DockerManager {
 
         final List<String> imageDeletion = TerminalManager.executeCommand(
                 this.localTerraformFolderPath,
-                false, "docker rmi " + this.localTerraformDockerImageWithTag
+                false, "docker rmi " + this.localTerraformDockerImageName
         );
 
         return (containerDeletion.size() > 0) && (imageDeletion.size() > 0);
@@ -125,7 +124,7 @@ public class DockerContainerTerraformManager extends DockerManager {
     }
 
     private String getContainerName() {
-        return this.localTerraformDockerImageName + "_" + this.getFunctionDefinition().getFunctionName();
+        return "container_" + this.localTerraformDockerImageName;
     }
 
 }
