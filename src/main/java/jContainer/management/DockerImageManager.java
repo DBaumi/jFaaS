@@ -86,9 +86,6 @@ public class DockerImageManager extends DockerManager {
             this.createFile(this.destinationFolder + "Dockerfile", content.toString());
 
         } else {
-            final LocalFileCleaner cleaner = new LocalFileCleaner();
-            cleaner.cleanDirectories();
-
             throw new FileNotFoundException("File '" + jarFile + "' does not exist!");
         }
     }

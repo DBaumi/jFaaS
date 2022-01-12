@@ -38,8 +38,6 @@ public class LocalFileCleaner {
                 } else {
                     logger.error("Could not delete delete directory '{}', please delete it after the execution!", directory.getName());
                 }
-            } else {
-                logger.error("Error with deleting because directory '{}' does not exist!", directory.getName());
             }
         }
     }

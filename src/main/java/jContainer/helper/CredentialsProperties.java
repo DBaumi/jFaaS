@@ -46,7 +46,7 @@ public class CredentialsProperties {
 
         //optional
         privateKey = CredentialsProperties.credentialProperties.getProperty("private_key");
-        repoLink = CredentialsProperties.credentialProperties.getProperty("ecr_repo_link");
+        repoLink = CredentialsProperties.credentialProperties.getProperty("aws_ecr_repository");
         awsRegion = Utils.isNullOrEmpty(CredentialsProperties.credentialProperties.getProperty("aws_region")) ? Constants.region : CredentialsProperties.credentialProperties.getProperty("aws_region");
         awsSessionToken = CredentialsProperties.credentialProperties.getProperty("aws_session_token");
         pathToJar = CredentialsProperties.credentialProperties.getProperty("absolute_path_to_JAR");

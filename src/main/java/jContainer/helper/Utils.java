@@ -43,8 +43,12 @@ public class Utils {
      */
     public static String checkForLinebreak(final String stringToCheck) {
         String replacedString = stringToCheck;
-        if (stringToCheck.contains("\n")) {
-            replacedString = replacedString.replaceAll("(\\n|\\r|\\s)", "");
+        try {
+            if (stringToCheck.contains("\n")) {
+                replacedString = replacedString.replaceAll("(\\n|\\r|\\s)", "");
+            }
+        } catch (NullPointerException e) {
+            throw new NullPointerException("Empty result in container!");
         }
         return replacedString;
     }

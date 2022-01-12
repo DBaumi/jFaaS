@@ -61,8 +61,13 @@ public class LocalDockerContainerExecutor extends DockerManager {
      */
     public void executeFunctionWithDockerhubInLocalContainer() throws IOException {
         this.imageManager.setWorkingDirectory(Constants.Paths.localFunctionDocker + this.getFunctionDefinition().getFunctionName() + '/');
-        this.prepareDockerImageForLocalExecution();
-        this.startContainer();
+        Boolean ready = this.prepareDockerImageForLocalExecution();
+
+        if(ready) {
+            this.startContainer();
+        } else {
+            logger.error("Image could not be pulled, check provided dockerhub image link: '{}'", this.imageManager.getImageName());
+        }
     }
 
     /**
@@ -117,12 +122,15 @@ public class LocalDockerContainerExecutor extends DockerManager {
     /**
      * Prepares directory for the local image/container.
      */
-    private void prepareDockerImageForLocalExecution() {
+    private Boolean prepareDockerImageForLocalExecution(){
+        Boolean ready;
         final File localDockerDirectory = new File(this.imageManager.getWorkingDirectory());
         localDockerDirectory.mkdirs();
 
         this.imageManager.pullDockerImageFromHub();
-        this.imageManager.checkForSuccessfulImagePull();
+        ready = this.imageManager.checkForSuccessfulImagePull();
+
+        return ready;
     }
 
     /**
@@ -131,16 +139,16 @@ public class LocalDockerContainerExecutor extends DockerManager {
     public void removeLocalDockerResources() {
         final Stopwatch stopwatch = new Stopwatch(false);
         if (this.removeLocalContainer()) {
-            LocalDockerContainerExecutor.logger.info("Successfully deleted container '{}'!", this.localFunctionContainerName);
+            logger.info("Successfully deleted container '{}'!", this.localFunctionContainerName);
         } else {
-            LocalDockerContainerExecutor.logger.error("Failed to delete container '{}'!", this.localFunctionContainerName);
+            logger.error("Failed to delete container '{}'!", this.localFunctionContainerName);
         }
         if (this.removeLocalImage()) {
-            LocalDockerContainerExecutor.logger.info("Successfully deleted image '{}'!", this.imageManager.getImageName());
+            logger.info("Successfully deleted image '{}'!", this.imageManager.getImageName());
         } else {
-            LocalDockerContainerExecutor.logger.error("Failed to delete image '{}'!", this.imageManager.getImageName());
+            logger.error("Failed to delete image '{}'!", this.imageManager.getImageName());
         }
-        LocalDockerContainerExecutor.logger.info("Time to remove resources was: {}ms", stopwatch.getElapsedTime());
+        logger.info("Time to remove resources was: {}ms", stopwatch.getElapsedTime());
     }
 
     /**
