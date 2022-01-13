@@ -43,10 +43,9 @@ public abstract class ContainerInvoker {
      * @return JsonObject of the execution result
      * @throws IOException when input file cannot be found
      */
-    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
+    public JsonObject invokeFunction(final String function, final Map<String, Object> functionInputs) throws Exception {
         final String functionResourceLink = Utils.extractResourceLink(function);
         JsonObject result = new JsonObject();
-        final Stopwatch timer = new Stopwatch(false);
 
         if (this instanceof EcsContainerInvoker && Utils.isAwsEcrRepoLink(functionResourceLink)) {
             ContainerInvoker.logger.info("Invocation with public AWS ECR image was chosen!");
@@ -54,23 +53,30 @@ public abstract class ContainerInvoker {
         } else if (this instanceof LocalContainerInvoker && Utils.isDockerhubRepoLink(functionResourceLink)) {
             ContainerInvoker.logger.info("Invocation with private dockerhub image was chosen!");
             result = this.invokeWithDockerhubImage(functionResourceLink, functionInputs);
-        } else if (functionResourceLink.contains(":")) {
-            ContainerInvoker.logger.info("Invocation with JAR file was chosen!");
+        } else if (Utils.isValidJarResourceInput(functionResourceLink)) {
+            if(this instanceof LocalContainerInvoker)
+                ContainerInvoker.logger.info("Invocation with JAR file on local docker engine was chosen!");
+
+            if(this instanceof EcsContainerInvoker)
+                ContainerInvoker.logger.info("Invocation with JAR file on ECS container system was chosen!");
+
             result = this.invokeWithJar(functionResourceLink, functionInputs);
         } else {
             if (this instanceof EcsContainerInvoker) {
-                ContainerInvoker.logger.error("Dockerhub link to private repository was provided wrong. Please check for the correct format: {}", "aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:tag");
-                result.addProperty("error", "AWS ECR link was provided in wrong format!");
+                ContainerInvoker.logger.error("Either ECR image link to private repository (format: '{}') or jar file (format: '{}') was provided wrong.", "aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:tag", "jarName:jdk_version");
+                result.addProperty("error", "Resource link for execution on ECS was provided in wrong format!");
             } else if (this instanceof LocalContainerInvoker) {
-                ContainerInvoker.logger.error("Dockerhub link to private repository was provided wrong. Please check for the correct format: {}", "username/repository:imagetag");
-                result.addProperty("error", "Dockerhub link was provided in wrong format!");
+                ContainerInvoker.logger.error("Either dockerhub link to private repository (format: '{}') or jar file (format: '{}') was provided wrong", "username/repository:imagetag", "jarName:jdk_version");
+                result.addProperty("error", "Resource link for local execution was provided in wrong format!");
             } else {
                 ContainerInvoker.logger.error("Invalid Link given");
                 result.addProperty("error", "Link is invalid (maybe unimplemented provider?)");
             }
+
+            throw new Exception(result.get("error").toString());
         }
 
-        return new PairResult<>(new Gson().fromJson(result, JsonObject.class).toString(), (long) timer.getElapsedTime());
+        return result;
     }
 
     /**

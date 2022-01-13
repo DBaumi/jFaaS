@@ -135,6 +135,15 @@ public class Utils {
     }
 
     /**
+     *
+     * @param input
+     * @return
+     */
+    public static Boolean isValidJarResourceInput(final String input) {
+        return (input.contains(":") && (input.length() >= 3));
+    }
+
+    /**
      * @param link
      * @return
      */
