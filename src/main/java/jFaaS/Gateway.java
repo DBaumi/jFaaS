@@ -1,14 +1,16 @@
 package jFaaS;
 
 import com.amazonaws.regions.Regions;
-import jContainer.invoker.ContainerInvoker;
-import jContainer.invoker.EcsContainerInvoker;
-import jContainer.invoker.LocalContainerInvoker;
+import jContainer.helper.Constants;
+import jContainer.helper.CredentialsProperties;
+import jContainer.invoker.*;
+import jContainer.management.TerminalManager;
 import jFaaS.invokers.*;
 import jFaaS.utils.PairResult;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -46,9 +48,8 @@ public class Gateway implements FaaSInvoker {
             if (properties.containsKey("aws_access_key") && properties.containsKey("aws_secret_key")) {
                 this.awsAccessKey = properties.getProperty("aws_access_key");
                 this.awsSecretKey = properties.getProperty("aws_secret_key");
-                if (properties.containsKey("aws_session_token")) {
-                    this.awsSessionToken = properties.getProperty("aws_session_token");
-                }
+                this.awsSessionToken = !jContainer.helper.Utils.isNullOrEmpty(properties.getProperty("aws_session_token")) ? properties.getProperty("aws_session_token") : null;
+
             }
             if (properties.containsKey("ibm_api_key")) {
                 this.openWhiskKey = properties.getProperty("ibm_api_key");
@@ -113,12 +114,29 @@ public class Gateway implements FaaSInvoker {
      * @throws IOException on failure
      */
     @Override
-    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
+    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws Exception {
         if (function.contains("container")) {
             if (function.contains("local")) {
                 this.localContainerInvoker = new LocalContainerInvoker();
                 return this.localContainerInvoker.invokeFunction(function, functionInputs);
             } else if (function.contains("ecs")) {
+
+                final List<String> response = TerminalManager.executeCommand(null, true,
+                        Constants.aws_cmd + " configure set aws_access_key_id " + CredentialsProperties.awsAccessKey,
+                        Constants.aws_cmd + " configure set aws_secret_access_key " + CredentialsProperties.awsSecretKey,
+                        CredentialsProperties.basicSessionCredentials == null ? "" : Constants.aws_cmd + " configure set aws_session_token " + CredentialsProperties.awsSessionToken,
+                        Constants.aws_cmd + " configure set region " + CredentialsProperties.awsRegion
+                );
+
+                response.forEach(s -> {
+                    final String errAWSnotFound = "not found";
+                    final String errAWSnichtGefunden = "nicht gefunden";
+                    final String err = "Error";
+                    if (s.contains(errAWSnotFound) || s.contains(errAWSnichtGefunden) || s.contains(err)) {
+                        throw new RuntimeException("AWS CLI is not installed or aws.exe not added to PATH!");
+                    }
+                });
+
                 this.ecsContainerInvoker = new EcsContainerInvoker();
                 return this.ecsContainerInvoker.invokeFunction(function, functionInputs);
             } else if (function.contains("gke")) {

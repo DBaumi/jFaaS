@@ -196,8 +196,7 @@ public class DockerImageManager extends DockerManager {
                 "docker image ls"
         );
 
-        return imageList.contains(Utils.getImageNameWithoutTagFromDockerhubLink(this.getImageName()))
-                && imageList.contains(this.getFunctionDefinition().getFunctionName());
+        return imageList.size() != 0;
     }
 
     /**

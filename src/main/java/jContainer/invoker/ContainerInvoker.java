@@ -43,9 +43,10 @@ public abstract class ContainerInvoker {
      * @return JsonObject of the execution result
      * @throws IOException when input file cannot be found
      */
-    public JsonObject invokeFunction(final String function, final Map<String, Object> functionInputs) throws Exception {
+    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws Exception {
         final String functionResourceLink = Utils.extractResourceLink(function);
         JsonObject result = new JsonObject();
+        Stopwatch timer = new Stopwatch(false);
 
         if (this instanceof EcsContainerInvoker && Utils.isAwsEcrRepoLink(functionResourceLink)) {
             ContainerInvoker.logger.info("Invocation with public AWS ECR image was chosen!");
@@ -64,10 +65,10 @@ public abstract class ContainerInvoker {
         } else {
             if (this instanceof EcsContainerInvoker) {
                 ContainerInvoker.logger.error("Either ECR image link to private repository (format: '{}') or jar file (format: '{}') was provided wrong.", "aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:tag", "jarName:jdk_version");
-                result.addProperty("error", "Resource link for execution on ECS was provided in wrong format!");
+                result.addProperty("error", "Provided resource link '" + functionResourceLink + "' for execution on ECS is invalid!");
             } else if (this instanceof LocalContainerInvoker) {
                 ContainerInvoker.logger.error("Either dockerhub link to private repository (format: '{}') or jar file (format: '{}') was provided wrong", "username/repository:imagetag", "jarName:jdk_version");
-                result.addProperty("error", "Resource link for local execution was provided in wrong format!");
+                result.addProperty("error", "Provided resource link '" + functionResourceLink + "' for local execution is invalid!");
             } else {
                 ContainerInvoker.logger.error("Invalid Link given");
                 result.addProperty("error", "Link is invalid (maybe unimplemented provider?)");
@@ -76,7 +77,7 @@ public abstract class ContainerInvoker {
             throw new Exception(result.get("error").toString());
         }
 
-        return result;
+        return new PairResult<>(new Gson().fromJson(result, JsonObject.class).toString(), (long) timer.getElapsedTime());
     }
 
     /**

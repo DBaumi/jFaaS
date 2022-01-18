@@ -128,6 +128,8 @@ public class LocalDockerContainerExecutor extends DockerManager {
         localDockerDirectory.mkdirs();
 
         this.imageManager.pullDockerImageFromHub();
+        Utils.sleep(Constants.utils.sleepTimer);
+
         ready = this.imageManager.checkForSuccessfulImagePull();
 
         return ready;
