@@ -1,5 +1,6 @@
 package jContainer.invoker;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jContainer.helper.ExecutionType;
 import jContainer.helper.LocalFileCleaner;
@@ -12,6 +13,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ *  Abstract invoker class which will be the interface for the jContainer integration in jFaaS.
+ */
 public abstract class ContainerInvoker {
     /* Execution type */
     public ExecutionType executionType;
@@ -25,11 +29,10 @@ public abstract class ContainerInvoker {
     /**
      * Constructor for the container invoker.
      *
-     * @param executionType as enum
+     * @param executionType
      */
-    public ContainerInvoker(ExecutionType executionType) {
+    public ContainerInvoker(final ExecutionType executionType) {
         this.executionType = executionType;
-        this.cleaner = new LocalFileCleaner(executionType);
     }
 
     /**
@@ -40,34 +43,52 @@ public abstract class ContainerInvoker {
      * @return JsonObject of the execution result
      * @throws IOException when input file cannot be found
      */
-    public PairResult invokeFunction(final String function, final Map<String, Object> functionInputs) throws IOException {
-        final String functionAsInputForInvoker = Utils.extractInputFromFunction(function);
+    public PairResult<String, Long> invokeFunction(final String function, final Map<String, Object> functionInputs) throws Exception {
+        final String functionResourceLink = Utils.extractResourceLink(function);
         JsonObject result = new JsonObject();
-        final Stopwatch timer = new Stopwatch(false);
+        Stopwatch timer = new Stopwatch(false);
 
-        if (functionAsInputForInvoker.contains(":")) {
-            ContainerInvoker.logger.info("Invocation with JAR file was chosen!");
-            result = this.invokeWithJarOnContainer(functionAsInputForInvoker, functionInputs);
-        } else if (Utils.isDockerhubRepoLink(functionAsInputForInvoker)) {
-            ContainerInvoker.logger.info("Invocation with public dockerhub image was chosen!");
-            result = this.invokeWithDockerhubImageOnContainer(functionAsInputForInvoker, functionInputs);
+        if (this instanceof EcsContainerInvoker && Utils.isAwsEcrRepoLink(functionResourceLink)) {
+            ContainerInvoker.logger.info("Invocation with public AWS ECR image was chosen!");
+            result = this.invokeWithAwsEcrImage(functionResourceLink, functionInputs);
+        } else if (this instanceof LocalContainerInvoker && Utils.isDockerhubRepoLink(functionResourceLink)) {
+            ContainerInvoker.logger.info("Invocation with private dockerhub image was chosen!");
+            result = this.invokeWithDockerhubImage(functionResourceLink, functionInputs);
+        } else if (Utils.isValidJarResourceInput(functionResourceLink)) {
+            if(this instanceof LocalContainerInvoker)
+                ContainerInvoker.logger.info("Invocation with JAR file on local docker engine was chosen!");
+
+            if(this instanceof EcsContainerInvoker)
+                ContainerInvoker.logger.info("Invocation with JAR file on ECS container system was chosen!");
+
+            result = this.invokeWithJar(functionResourceLink, functionInputs);
         } else {
-            ContainerInvoker.logger.error("Dockerhub link to public repository was provided wrong. Please check for the correct format: {}", "username/repository:imagetag");
-            result.addProperty("error", "Dockerhub link was provided in wrong format!");
+            if (this instanceof EcsContainerInvoker) {
+                ContainerInvoker.logger.error("Either ECR image link to private repository (format: '{}') or jar file (format: '{}') was provided wrong.", "aws_account_id.dkr.ecr.region.amazonaws.com/my-repository:tag", "jarName:jdk_version");
+                result.addProperty("error", "Provided resource link '" + functionResourceLink + "' for execution on ECS is invalid!");
+            } else if (this instanceof LocalContainerInvoker) {
+                ContainerInvoker.logger.error("Either dockerhub link to private repository (format: '{}') or jar file (format: '{}') was provided wrong", "username/repository:imagetag", "jarName:jdk_version");
+                result.addProperty("error", "Provided resource link '" + functionResourceLink + "' for local execution is invalid!");
+            } else {
+                ContainerInvoker.logger.error("Invalid Link given");
+                result.addProperty("error", "Link is invalid (maybe unimplemented provider?)");
+            }
+
+            throw new Exception(result.get("error").toString());
         }
 
-        return new PairResult<>(result.getAsString(), timer.getElapsedTime());
+        return new PairResult<>(new Gson().fromJson(result, JsonObject.class).toString(), (long) timer.getElapsedTime());
     }
 
     /**
      * Invoke a function on a container system with an existing JAR file of the function in jars/ directory.
      *
-     * @param function       as a String for the function to invoke
+     * @param jarName       as a String for the function to invoke
      * @param functionInputs as a Map<String, Object> to represent JSON input
      * @return functionOutputs as a Map<String, Object> to represent JSON output
-     * @throws IOException when input cannot be found
+     * @throws IOException
      */
-    abstract public JsonObject invokeWithJarOnContainer(String function, Map<String, Object> functionInputs) throws IOException;
+    abstract public JsonObject invokeWithJar(String jarName, Map<String, Object> functionInputs) throws IOException;
 
     /**
      * Invoke a function on a container system with a dockerhub repository link to an image with the function already in it.
@@ -75,15 +96,26 @@ public abstract class ContainerInvoker {
      * @param dockerhubImageLink as a String for the function to invoke
      * @param functionInputs     as a Map<String, Object> to represent JSON input
      * @return functionOutputs      as a Map<String, Object> to represent JSON output
-     * @throws IOException when input cannot be found
+     * @throws IOException
      */
-    abstract public JsonObject invokeWithDockerhubImageOnContainer(String dockerhubImageLink, Map<String, Object> functionInputs) throws IOException;
-    
+    abstract public JsonObject invokeWithDockerhubImage(String dockerhubImageLink, Map<String, Object> functionInputs) throws IOException;
+
+    /**
+     * Invoke a function on a container system with an AWS ECR repository link to an image with the function already in it.
+     *
+     * @param awsEcrImageLink as a String for the function to invoke
+     * @param functionInputs  as a Map<String, Object> to represent JSON input
+     * @return functionOutputs      as a Map<String, Object> to represent JSON output
+     * @throws IOException
+     */
+    abstract public JsonObject invokeWithAwsEcrImage(final String awsEcrImageLink, final Map<String, Object> functionInputs) throws IOException;
+
+
     public ExecutionType getExecutionType() {
         return this.executionType;
     }
 
-    public void setExecutionType(ExecutionType executionType) {
+    public void setExecutionType(final ExecutionType executionType) {
         this.executionType = executionType;
     }
 

@@ -5,11 +5,16 @@ package jContainer.helper;
  */
 public interface Constants {
     String region = "eu-central-1";
+    String aws_cmd = System.getProperty("os.name").contains("Windows") ? "aws.exe" : "aws";
 
     interface CloudWatch {
-        String log_group_name = "/" + CloudWatch.log_group_prefix + "/terraform_ecs_log";
+        String log_group_name = "/" + Constants.CloudWatch.log_group_prefix + "/terraform_ecs_log";
         String log_group_prefix = "ecs";
         Integer retention_time_days = 1;
+    }
+
+    interface Terraform {
+        String local_terraform = "local-terraform";
     }
 
     interface Docker {
@@ -21,13 +26,13 @@ public interface Constants {
     }
 
     interface Paths {
-        String resourceFolder = "src/main/resources/";
-        String jarFilePath = "./jars/";
-        String scriptFolder = Paths.resourceFolder + "scripts/";
-        String terraformLocalDocker = Paths.resourceFolder + "localTerraform/";
+        String credentialsFile = "credentials.properties";
+        String jContainerResourceFolder = "jContainer_resources/";
+        String fallbackJarFolder = "./jars/";
+        String scriptFolder = Constants.Paths.jContainerResourceFolder + "scripts/";
         String googleCredentials = "google_cred.json";
-        String localTerraformDocker = Paths.resourceFolder + "localTerraform/";
-        String localFunctionDocker = Paths.resourceFolder + "localFunction/";
+        String localTerraformDocker = Paths.jContainerResourceFolder + "localTerraform";
+        String localFunctionDocker = Paths.jContainerResourceFolder + "localFunction/";
 
     }
 

@@ -3,23 +3,22 @@ package jContainer.management;
 import jContainer.helper.Constants;
 import jContainer.helper.CredentialsProperties;
 import jContainer.helper.FunctionDefinition;
+import jContainer.executor.AwsContainerExecutor;
 
-import java.io.IOException;
-
-public class TerraformAwsManager extends AbstractManager {
-
-    private final DockerContainerTerraformManager dockerContainerTerraformManager;
-    private String dockerImageName = this.getCreatedImageNameDockerHub();
+public class TerraformAwsManager extends AbstractTerraformManager {
 
     public TerraformAwsManager(final FunctionDefinition functionDefinition) {
         super(functionDefinition);
-        this.dockerContainerTerraformManager = new DockerContainerTerraformManager(functionDefinition);
+
+        if (AwsContainerExecutor.ecrManager == null) {
+            System.err.println("ECR Manager not set");
+            return;
+        }
+        this.dockerImageName = AwsContainerExecutor.ecrManager.getRepoLink() + ":" + this.getFunctionDefinition().getFunctionName();
     }
 
-    /**
-     * defines the structure for a terraform file for aws ecs
-     */
-    private void createAWSTerraformScript() {
+    @Override
+    protected void createTerraformScript() {
 
         final String logGroupName = Constants.CloudWatch.log_group_name + this.getUniqueSuffix();
         final String clusterName = "terraform_cluster" + this.getUniqueSuffix();
@@ -122,11 +121,13 @@ public class TerraformAwsManager extends AbstractManager {
                         "\ttask_role_arn = local.l_task_role_arn\n" +
                         "}\n"
         );
+
         stringBuilder.append(
                 "output \"aws_ecs_task_arn\" {\n" +
                         "\tvalue = aws_ecs_task_definition.terraform_task" + this.getUniqueSuffix() + ".task_role_arn\n" +
                         "}\n"
         );
+
         // servicesettings
         stringBuilder.append(
                 "resource \"aws_ecs_service\" \"terraform_service" + this.getUniqueSuffix() + "\" {\n" +
@@ -146,67 +147,4 @@ public class TerraformAwsManager extends AbstractManager {
         this.createFile(this.getWorkingDirectory() + this.getFunctionDefinition().getFunctionName() + ".tf", stringBuilder.toString());
     }
 
-    /**
-     * executes the created terraform script
-     */
-    public void runTerraformScript() throws IOException {
-        this.createAWSTerraformScript();
-
-//        start local terraform container
-        this.dockerContainerTerraformManager.startTerraformContainer();
-        this.execTerraformCommand("terraform init", "terraform refresh", "terraform apply -auto-approve");
-    }
-
-    /**
-     * destroys the created aws resources
-     */
-    public void removeTerraformCreatedResources() {
-        this.execTerraformCommand("terraform plan -destroy -out=tfplan", "terraform apply \"tfplan\"");
-    }
-
-    /**
-     * removes all locally created docker resources.
-     *
-     * @return true if deletion was successful, false otherwise
-     */
-    public Boolean removeLocalCreatedTerraformResources() {
-        return this.dockerContainerTerraformManager.removeTerraformDockerResources();
-    }
-
-    /**
-     * gets the outputs out of terraform script
-     */
-    public void getTerraformOutput() {
-        this.execTerraformCommand(
-                "terraform output -json",
-                "terraform output -json > " + this.getFunctionDefinition().getFunctionName() + "_output.json"
-        );
-    }
-
-    /**
-     * send and execute commands in terraform-docker-container
-     *
-     * @param commands
-     */
-    private void execTerraformCommand(final String... commands) {
-        for (final String command : commands) {
-            this.dockerContainerTerraformManager.sendCommandToContainer(command);
-        }
-    }
-
-    private String getUniqueSuffix() {
-        return "_" + this.getFunctionDefinition().getFunctionName() + "_" + CredentialsProperties.localUser;
-    }
-
-    public String getDockerImageName() {
-        return this.dockerImageName;
-    }
-
-    public void setDockerImageName(final String dockerImageName) {
-        this.dockerImageName = dockerImageName;
-    }
-
-    public DockerContainerTerraformManager getDockerContainerTerraformManager() {
-        return this.dockerContainerTerraformManager;
-    }
 }

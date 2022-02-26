@@ -19,28 +19,26 @@ public class EcsContainerInvoker extends ContainerInvoker {
     /**
      * Invoke a function on AWS ECS service.
      *
-     * @param function       as a String for the function to invoke
+     * @param jarName       as a String for the function to invoke
      * @param functionInputs as a Map<String, Object> to represent JSON input
      * @return functionOutputs as a Map<String, Object> to represent JSON output
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithJarOnContainer(String function, final Map<String, Object> functionInputs) throws IOException {
+    public JsonObject invokeWithJar(String jarName, final Map<String, Object> functionInputs) throws IOException {
         final Stopwatch invocationTime = new Stopwatch(false);
-        function = function.toLowerCase();
+        jarName = jarName.toLowerCase();
 
-        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromFunction(function), functionInputs, Utils.extractJDKVersionFromFunction(function));
+        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromResourceLink(jarName), functionInputs, Utils.extractJDKVersionFromResourceLink(jarName));
         final AwsContainerExecutor awsContainerExecutor = new AwsContainerExecutor(functionDefinition, this.executionType);
         awsContainerExecutor.executeFunctionWithJarInECS(functionDefinition.getJarFileName());
 
         functionDefinition.setFunctionOutputs(awsContainerExecutor.containerExecutionResult(functionDefinition.getFunctionName()));
 
-        awsContainerExecutor.cleanUpAllResources(true);
+        awsContainerExecutor.cleanUpAllResources(true, true);
 
         ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
-
-        this.cleaner.cleanDirectories();
 
         return functionDefinition.getFunctionOutputs();
     }
@@ -54,22 +52,47 @@ public class EcsContainerInvoker extends ContainerInvoker {
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithDockerhubImageOnContainer(String dockerhubImageLink, final Map<String, Object> functionInputs) throws IOException {
+    public JsonObject invokeWithDockerhubImage(String dockerhubImageLink, final Map<String, Object> functionInputs) throws IOException {
         final Stopwatch invocationTime = new Stopwatch(false);
         dockerhubImageLink = dockerhubImageLink.toLowerCase();
 
         final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.getFunctionNameFromDockerhubLink(dockerhubImageLink), functionInputs);
         final AwsContainerExecutor awsContainerExecutor = new AwsContainerExecutor(functionDefinition, this.executionType);
-        awsContainerExecutor.executeFunctionWithDockerhubInECS(dockerhubImageLink);
+        awsContainerExecutor.executeFunctionWithECRImageInECS(dockerhubImageLink);
 
         functionDefinition.setFunctionOutputs(awsContainerExecutor.containerExecutionResult(functionDefinition.getFunctionName()));
 
-        awsContainerExecutor.cleanUpAllResources(false);
+        awsContainerExecutor.cleanUpAllResources(false, false);
 
         ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
-        this.cleaner.cleanDirectories();
+        return functionDefinition.getFunctionOutputs();
+    }
+
+    /**
+     * Invoke a function on a container system with a dockerhub repository link to an image with the function already in it on AWS ECS service.
+     *
+     * @param awsEcrImageLink as a String for the function to invoke
+     * @param functionInputs  as a Map<String, Object> to represent JSON input
+     * @return functionOutputs      as a Map<String, Object> to represent JSON output
+     * @throws IOException
+     */
+    @Override
+    public JsonObject invokeWithAwsEcrImage(String awsEcrImageLink, final Map<String, Object> functionInputs) throws IOException {
+        final Stopwatch invocationTime = new Stopwatch(false);
+        awsEcrImageLink = awsEcrImageLink.toLowerCase();
+
+        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.getFunctionNameFromAwsEcrLink(awsEcrImageLink), functionInputs);
+        final AwsContainerExecutor awsContainerExecutor = new AwsContainerExecutor(functionDefinition, this.executionType);
+        awsContainerExecutor.executeFunctionWithECRImageInECS(awsEcrImageLink);
+
+        functionDefinition.setFunctionOutputs(awsContainerExecutor.containerExecutionResult(functionDefinition.getFunctionName()));
+
+        awsContainerExecutor.cleanUpAllResources(false, false);
+
+        ContainerInvoker.logger.info("Execution on ECS took: {}ms", awsContainerExecutor.containerExecutionTime());
+        ContainerInvoker.logger.info("Invocation of function '{}' on AWS with ECS container system took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
         return functionDefinition.getFunctionOutputs();
     }

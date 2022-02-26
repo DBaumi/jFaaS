@@ -1,5 +1,6 @@
 package jContainer.helper;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 /**
@@ -28,8 +29,8 @@ public class Utils {
      * @return json object representing the output of the container
      */
     public static JsonObject generateJsonOutput(final String stringToConvert) {
-        final JsonObject output = new JsonObject();
-        output.addProperty("message", stringToConvert);
+        final Gson parser = new Gson();
+        final JsonObject output = parser.fromJson(stringToConvert, JsonObject.class);
 
         return output;
     }
@@ -42,8 +43,12 @@ public class Utils {
      */
     public static String checkForLinebreak(final String stringToCheck) {
         String replacedString = stringToCheck;
-        if (stringToCheck.contains("\n")) {
-            replacedString = replacedString.replaceAll("(\\n|\\r|\\s)", "");
+        try {
+            if (stringToCheck.contains("\n")) {
+                replacedString = replacedString.replaceAll("(\\n|\\r|\\s)", "");
+            }
+        } catch (NullPointerException e) {
+            throw new NullPointerException("Empty result in container!");
         }
         return replacedString;
     }
@@ -78,6 +83,21 @@ public class Utils {
     }
 
     /**
+     * Extract function name from AWS ECR link to image with tag.
+     *
+     * @param awsEcrImageLink
+     * @return function name
+     */
+    public static String getFunctionNameFromAwsEcrLink(final String awsEcrImageLink) {
+        String function = awsEcrImageLink;
+        if (!awsEcrImageLink.isEmpty()) {
+            function = function.substring(function.lastIndexOf(":") + 1);
+        }
+
+        return function;
+    }
+
+    /**
      * Extract  image name from dockerhub link.
      *
      * @param dockerhubImageLink link to the image on the public dockerhub repository
@@ -93,12 +113,12 @@ public class Utils {
     }
 
     /**
-     * Extracts the dockerhub link from the public repository.
+     * Extracts the dockerhub link from the input.
      *
      * @param functionInput
      * @return
      */
-    public static String extractInputFromFunction(final String functionInput) {
+    public static String extractResourceLink(final String functionInput) {
         String function = functionInput;
         if (!function.isEmpty()) {
             function = function.substring(function.indexOf("_") + 1, function.lastIndexOf("_"));
@@ -112,6 +132,23 @@ public class Utils {
      */
     public static Boolean isDockerhubRepoLink(final String link) {
         return (link.contains(":") && link.contains("/"));
+    }
+
+    /**
+     *
+     * @param input
+     * @return
+     */
+    public static Boolean isValidJarResourceInput(final String input) {
+        return (input.contains(":") && (input.length() >= 3));
+    }
+
+    /**
+     * @param link
+     * @return
+     */
+    public static Boolean isAwsEcrRepoLink(final String link) {
+        return (link.contains(".dkr.ecr.") && link.contains(".amazonaws.com/"));
     }
 
     /**
@@ -130,10 +167,10 @@ public class Utils {
      * @param function in form "function:8"
      * @return java version as string
      */
-    public static String extractJDKVersionFromFunction(final String function) {
+    public static String extractJDKVersionFromResourceLink(final String function) {
         String s = function;
         if (!s.isEmpty()) {
-            s = s.substring(function.indexOf(":") + 1);
+            s = (s.contains(":")) ? s.substring(function.indexOf(":") + 1) : "8";
         }
         return s;
     }
@@ -144,11 +181,10 @@ public class Utils {
      * @param function in form "function:8"
      * @return java version as string
      */
-    public static String extractFunctionNameFromFunction(final String function) {
+    public static String extractFunctionNameFromResourceLink(final String function) {
         String s = function;
         if (!s.isEmpty()) {
             s = s.substring(0, s.indexOf(":"));
-
         }
         return s;
     }

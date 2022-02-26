@@ -12,24 +12,24 @@ import java.util.Map;
 
 public class LocalContainerInvoker extends ContainerInvoker {
 
-    public LocalContainerInvoker() {
+    public LocalContainerInvoker(){
         super(ExecutionType.LOCAL_DOCKER);
     }
 
     /**
      * Invoke a function on the local docker engine.
      *
-     * @param function       as a String for the function to invoke
+     * @param jarName        as a String for the function to invoke
      * @param functionInputs as a Map<String, Object> to represent JSON input
      * @return functionOutputs as a Map<String, Object> to represent JSON output
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithJarOnContainer(String function, final Map<String, Object> functionInputs) throws IOException {
+    public JsonObject invokeWithJar(String jarName, final Map<String, Object> functionInputs) throws IOException {
         final Stopwatch invocationTime = new Stopwatch(false);
-        function = function.toLowerCase();
+        jarName = jarName.toLowerCase();
 
-        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromFunction(function), functionInputs, Utils.extractJDKVersionFromFunction(function));
+        final FunctionDefinition functionDefinition = new FunctionDefinition(Utils.extractFunctionNameFromResourceLink(jarName), functionInputs, Utils.extractJDKVersionFromResourceLink(jarName));
         final LocalDockerContainerExecutor localDockerContainerExecutor = new LocalDockerContainerExecutor(functionDefinition);
         localDockerContainerExecutor.executeFunctionWithJarInLocalContainer();
 
@@ -38,8 +38,6 @@ public class LocalContainerInvoker extends ContainerInvoker {
         localDockerContainerExecutor.removeLocalDockerResources();
         ContainerInvoker.logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
-
-        this.cleaner.cleanDirectories();
 
         return functionDefinition.getFunctionOutputs();
     }
@@ -53,7 +51,7 @@ public class LocalContainerInvoker extends ContainerInvoker {
      * @throws IOException
      */
     @Override
-    public JsonObject invokeWithDockerhubImageOnContainer(String dockerhubImageLink, final Map<String, Object> functionInputs) throws IOException {
+    public JsonObject invokeWithDockerhubImage(String dockerhubImageLink, final Map<String, Object> functionInputs) throws IOException {
         final Stopwatch invocationTime = new Stopwatch(false);
         dockerhubImageLink = dockerhubImageLink.toLowerCase();
 
@@ -68,8 +66,18 @@ public class LocalContainerInvoker extends ContainerInvoker {
         ContainerInvoker.logger.info("Execution on local docker container took: {}ms", localDockerContainerExecutor.getExecutionTime());
         ContainerInvoker.logger.info("Invocation of function '{}' as a local docker container took {}ms", functionDefinition.getFunctionName(), invocationTime.getElapsedTime());
 
-        this.cleaner.cleanDirectories();
-
         return functionDefinition.getFunctionOutputs();
+    }
+
+    /**
+     * @param awsEcrImageLink as a String for the function to invoke
+     * @param functionInputs  as a Map<String, Object> to represent JSON input
+     * @return
+     * @throws IOException
+     */
+    @Override
+    public JsonObject invokeWithAwsEcrImage(final String awsEcrImageLink, final Map<String, Object> functionInputs) throws IOException {
+        ContainerInvoker.logger.warn("Local invocation with ECR image is not yet supported!");
+        throw new UnsupportedOperationException("Local execution with an ECR image is not yet supported!");
     }
 }

@@ -6,6 +6,7 @@ import jContainer.helper.FunctionDefinition;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 
 public abstract class AbstractManager {
 
@@ -48,6 +49,11 @@ public abstract class AbstractManager {
 
     }
 
+    // TODO: implement, if needed
+    public String readFile(final String path) {
+        return null;
+    }
+
     public FunctionDefinition getFunctionDefinition() {
         return this.functionDefinition;
     }
@@ -67,9 +73,7 @@ public abstract class AbstractManager {
         return Constants.Docker.hub_user_and_repo_name + this.getFunctionDefinition().getFunctionName();
     }
 
-    protected void runCommandInWorkingDirectory(final String... commands) {
-        TerminalManager.executeCommand(this.getWorkingDirectory(), false, commands);
+    protected List<String> runCommandInWorkingDirectory(final String... commands) {
+        return TerminalManager.executeCommand(this.getWorkingDirectory(), false, commands);
     }
-
-
 }
